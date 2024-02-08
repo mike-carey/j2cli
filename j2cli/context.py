@@ -175,31 +175,43 @@ except ImportError:
 
 #endregion
 
+def merge(d1, d2):
+    """"""
+    merged = d1.copy()
+    for k, v in d2.items():
+        if k in d1 and isinstance(v, dict) and isinstance(d1[k], dict):
+            merged[k] = merge(merged[k], v)
+        else:
+            merged[k] = v
+    return merged
 
 
-def read_context_data(format, f, environ, import_env=None):
+def read_context_data(format, files, environ, import_env=None):
     """ Read context data into a dictionary
     :param format: Data format
     :type format: str
-    :param f: Data file stream, or None (for env)
-    :type f: file|None
+    :param files: Data file streams, or empty (for env)
+    :type files: list(file)
     :param import_env: Variable name, if any, that will contain environment variables of the template.
-    :type import_env: bool|None
+    :type import_env: str|None
     :return: Dictionary with the context data
     :rtype: dict
     """
 
     # Special case: environment variables
-    if format == 'env' and f is None:
+    if format == 'env' and len(files) < 1:
         return _parse_env(environ)
-
-    # Read data string stream
-    data_string = f.read()
 
     # Parse it
     if format not in FORMATS:
         raise ValueError('{0} format unavailable'.format(format))
-    context = FORMATS[format](data_string)
+
+    context = {}
+    for file in files:
+        # Read data string stream
+        data_string = file.read()
+        data = FORMATS[format](data_string)
+        context = merge(context, dict(data))
 
     # Import environment
     if import_env is not None:

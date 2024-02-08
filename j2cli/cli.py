@@ -121,12 +121,12 @@ def render_command(cwd, environ, stdin, argv):
     parser.add_argument('--undefined', action='store_true', dest='undefined', help='Allow undefined variables to be used in templates (no error will be raised)')
     parser.add_argument('-o', metavar='outfile', dest='output_file', help="Output to a file instead of stdout")
     parser.add_argument('template', help='Template file to process')
-    parser.add_argument('data', nargs='?', default=None, help='Input data file path; "-" to use stdin')
+    parser.add_argument('data', nargs='*', default=[], help='Input data file paths; "-" to use stdin')
     args = parser.parse_args(argv)
 
     # Input: guess format
     if args.format == '?':
-        if args.data is None or args.data == '-':
+        if len(args.data) < 1 or args.data[0] == '-':
             args.format = 'env'
         else:
             args.format = {
@@ -135,14 +135,14 @@ def render_command(cwd, environ, stdin, argv):
                 '.yml': 'yaml',
                 '.yaml': 'yaml',
                 '.env': 'env'
-            }[os.path.splitext(args.data)[1]]
+            }[os.path.splitext(args.data[0])[1]]
 
     # Input: data
     # We always expect a file;
     # unless the user wants 'env', and there's no input file provided.
     if args.format == 'env':
         # With the "env" format, if no dotenv filename is provided, we have two options:
-        # either the user wants to use the current environment, or he's feeding a dotenv file at stdin.
+        # either the user wants to use the current environment, or they're feeding a dotenv file at stdin.
         # Depending on whether we have data at stdin, we'll need to choose between the two.
         #
         # The problem is that in Linux, you can't reliably determine whether there is any data at stdin:
@@ -151,18 +151,14 @@ def render_command(cwd, environ, stdin, argv):
         #
         # And this is what we're going to do here as well.
         # The script, however, would give the user a hint that they should use '-'
-        if args.data == '-':
-            input_data_f = stdin
-        elif args.data == None:
-            input_data_f = None
+        if len(args.data) > 0 and args.data[0] == '-':
+            input_data_files = [stdin]
+        elif args.data == []:
+            input_data_files = []
         else:
-            input_data_f = open(args.data)
+            input_data_files = [open(file) for file in args.data]
     else:
-        input_data_f = stdin if args.data is None or args.data == '-' else open(args.data)
-
-    # Python 2: Encode environment variables as unicode
-    if sys.version_info[0] == 2 and args.format == 'env':
-        environ = dict((k.decode('utf-8'), v.decode('utf-8')) for k, v in environ.items())
+        input_data_files = [stdin] if len(args.data) < 1 or args.data[0] == '-' else [open(file) for file in args.data]
 
     # Customization
     if args.customize is not None:
@@ -175,7 +171,7 @@ def render_command(cwd, environ, stdin, argv):
     # Read data
     context = read_context_data(
         args.format,
-        input_data_f,
+        input_data_files,
         environ,
         args.import_env
     )

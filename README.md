@@ -243,6 +243,15 @@ Usage:
     $ cat data.yml | j2 --format=yaml config.j2
 
 
+## Multiple data files
+
+`j2` accepts multiple data files and merges them. All files must have the same format and if no `--format` is provided, it will use the first argument to determine the format. The last file in the list will take precedence.
+
+### Usage
+
+```bash
+j2 --format yaml nginx.j2 data.yml additional.yml override.yml
+```
 
 
 Extras

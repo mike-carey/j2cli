@@ -238,3 +238,26 @@ class RenderTest(unittest.TestCase):
         # Got to restore to the original configuration and use {% %} again
         with mktemp('{% if 1 %}1{% endif %}') as template:
             self._testme(['--customize=render-test.py', template], '1')
+
+    def test_multiple_data_files(self):
+        """ Test multiple data files passed """
+
+        alternate_expected_output = """server {
+  listen 80;
+  server_name localhost;
+
+  root /var/www;
+  index index.htm;
+
+  access_log /var/log/nginx//http.access.log combined;
+  error_log  /var/log/nginx//http.error.log;
+}
+"""
+
+        # Filename
+        self._testme(['--format=env', 'resources/nginx-env.j2', 'resources/data.env', 'resources/data-override.env'], alternate_expected_output)
+        self._testme([                'resources/nginx-env.j2', 'resources/data.env', 'resources/data-override.env'], alternate_expected_output)
+        # Format
+        self._testme(['--format=env', 'resources/nginx-env.j2', 'resources/data.env', 'resources/data-override.env'], alternate_expected_output)
+        self._testme([                'resources/nginx-env.j2', 'resources/data.env', 'resources/data-override.env'], alternate_expected_output)
+
